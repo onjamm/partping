@@ -21,9 +21,17 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
 
       console.log(`[${watch.id}] new listing: ${listing.vin} @ ${listing.yard}`);
       try {
+        const messageLines = [
+          `${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(),
+          `Yard: ${listing.yard}`,
+          listing.row ? `Row: ${listing.row}` : null,
+          listing.dateAdded ? `Added to yard: ${listing.dateAdded}` : null,
+          `VIN: ${listing.vin}`,
+        ].filter(Boolean);
+
         await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,
-          message: `${listing.year ?? ""} ${listing.make} ${listing.model}\nYard: ${listing.yard}\nVIN: ${listing.vin}`.trim(),
+          message: messageLines.join("\n"),
           url: listing.url,
           tags: ["car", "mag"],
         });

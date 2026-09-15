@@ -20,7 +20,16 @@ async function withConfig(watches, fn) {
   }
 }
 
-const listing = { vin: "VIN123", make: "BMW", model: "3 Series", year: 1999, yard: "Pick-n-Pull Tacoma", url: "https://row52.com/vin123" };
+const listing = {
+  vin: "VIN123",
+  make: "BMW",
+  model: "3 Series",
+  year: 1999,
+  yard: "Pick-n-Pull Tacoma",
+  row: "24",
+  dateAdded: "Sep 03, 2026",
+  url: "https://row52.com/vin123",
+};
 
 test("a new listing gets notified and marked seen", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
@@ -34,9 +43,26 @@ test("a new listing gets notified and marked seen", async () => {
     assert.equal(notified.length, 1);
     assert.match(notified[0].title, /E46 328i/);
     assert.match(notified[0].message, /VIN123/);
+    assert.match(notified[0].message, /Row: 24/);
+    assert.match(notified[0].message, /Added to yard: Sep 03, 2026/);
 
     const seen = await loadSeenStore(config.seenStorePath);
     assert.ok(seen.e46.VIN123);
+  });
+});
+
+test("a listing missing row/dateAdded doesn't leak 'undefined' into the message", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const bareListing = { vin: "VIN999", make: "BMW", model: "3 Series", year: 1999, yard: "Pick-n-Pull Tacoma", url: "x" };
+    const notified = [];
+    await runOnce(config, {
+      search: async () => [bareListing],
+      notify: async (ntfy, payload) => notified.push(payload),
+    });
+
+    assert.doesNotMatch(notified[0].message, /undefined/);
+    assert.doesNotMatch(notified[0].message, /Row:/);
+    assert.doesNotMatch(notified[0].message, /Added to yard:/);
   });
 });
 
