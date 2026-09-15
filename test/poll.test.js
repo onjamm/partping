@@ -53,11 +53,10 @@ test("a new listing gets notified and marked seen", async () => {
     assert.equal(newCount, 1);
     assert.equal(notified.length, 1);
     assert.match(notified[0].title, /E46 328i/);
-    assert.match(notified[0].message, /VIN123/);
-    assert.match(notified[0].message, /\*\*Row 24\*\* — Pick-n-Pull Tacoma/);
-    assert.match(notified[0].message, /Lakewood, Washington 98499/);
-    assert.match(notified[0].message, /Added Sep 03, 2026/);
+    assert.match(notified[0].message, /^\*\*1999 BMW 3 Series\*\*\n\n/); // title first, bold
     assert.match(notified[0].message, /VIN `VIN123`/);
+    assert.match(notified[0].message, /Added Sep 03, 2026/);
+    assert.match(notified[0].message, /Row 24 · Pick-n-Pull Tacoma · Lakewood, Washington 98499$/);
     assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
     assert.equal(notified[0].imageUrl, listing.imageUrl);
     assert.equal(notified[0].priority, "high");
@@ -132,9 +131,10 @@ test("a listing missing row/dateAdded/yardAddress doesn't leak 'undefined' into 
     });
 
     assert.doesNotMatch(notified[0].message, /undefined/);
-    assert.doesNotMatch(notified[0].message, /\*\*Row/);
     assert.doesNotMatch(notified[0].message, /Added /);
-    assert.match(notified[0].message, /^Pick-n-Pull Tacoma\n/); // no row -> plain yard name leads, not bolded
+    // no Added section at all -> exactly 3 sections (title, VIN, row/yard), not 4
+    assert.equal(notified[0].message.split("\n\n").length, 3);
+    assert.match(notified[0].message, /Pick-n-Pull Tacoma$/); // no row/address -> just the yard name
   });
 });
 
@@ -213,20 +213,21 @@ test("the same VIN under two different watches is tracked independently", async 
   );
 });
 
-test("a decoded body style/model is included in the notification", async () => {
+test("a decoded model takes precedence over Row52's generic model in the title", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     await runOnce(config, {
-      search: async () => [listing],
+      search: async () => [listing], // listing.model === "3 Series"
       notify: async (ntfy, payload) => notified.push(payload),
       decode: async () => ({ bodyClass: "Sedan/Saloon", model: "330i" }),
     });
 
-    assert.match(notified[0].message, /1999 BMW 3 Series · Sedan\/Saloon · 330i/);
+    assert.match(notified[0].message, /^\*\*1999 BMW 330i · Sedan\/Saloon\*\*/);
+    assert.doesNotMatch(notified[0].message, /3 Series/);
   });
 });
 
-test("a decoded result with only one of bodyClass/model still renders cleanly", async () => {
+test("a decoded bodyClass with no decoded model still uses Row52's model in the title", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     await runOnce(config, {
@@ -235,11 +236,11 @@ test("a decoded result with only one of bodyClass/model still renders cleanly", 
       decode: async () => ({ bodyClass: "Sedan/Saloon", model: undefined }),
     });
 
-    assert.match(notified[0].message, /1999 BMW 3 Series · Sedan\/Saloon\n/);
+    assert.match(notified[0].message, /^\*\*1999 BMW 3 Series · Sedan\/Saloon\*\*/);
   });
 });
 
-test("a failed VIN decode doesn't block the notification, just omits the enrichment", async () => {
+test("a failed VIN decode doesn't block the notification, just falls back to Row52's own data", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     const newCount = await runOnce(config, {
@@ -250,7 +251,7 @@ test("a failed VIN decode doesn't block the notification, just omits the enrichm
 
     assert.equal(newCount, 1);
     assert.equal(notified.length, 1);
-    assert.match(notified[0].message, /1999 BMW 3 Series\n/); // no trailing " · ..." when decode is empty
+    assert.match(notified[0].message, /^\*\*1999 BMW 3 Series\*\*/); // no trailing " · ..." when decode is empty
   });
 });
 

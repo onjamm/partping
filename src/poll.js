@@ -41,26 +41,25 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
     for (const listing of results) {
       if (isSeen(seen, watch.id, listing.vin)) continue;
 
-      console.log(`[${watch.id}] new listing: ${listing.vin} @ ${listing.yard}`);
+      console.log(`[${watch.id}] new listing: ${listing.vin} @ ${listing.yardName}`);
       try {
         const decoded = await decode(listing.vin);
 
-        // Ordered by what you'd actually do with it: where to go first (bold —
-        // the one thing you need at a glance), then what car it is (to confirm
-        // it's the right one), then low-priority reference info last.
-        const rowYardLine = listing.row ? `**Row ${listing.row}** — ${listing.yardName}` : listing.yardName;
+        // Four sections, blank-line separated: what car (title, bold — prefers
+        // the NHTSA-decoded specific model over Row52's generic one when
+        // available), VIN, when it showed up, then where to actually find it.
+        const modelForTitle = decoded?.model || listing.model;
+        const titleLine = `**${[`${listing.year ?? ""} ${listing.make} ${modelForTitle}`.trim(), decoded?.bodyClass]
+          .filter(Boolean)
+          .join(" · ")}**`;
 
-        const carLine = [`${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(), decoded?.bodyClass, decoded?.model]
+        const vinLine = `VIN \`${listing.vin}\``;
+        const addedLine = listing.dateAdded ? `Added ${formatDateAdded(listing.dateAdded)}` : null;
+        const rowLine = [listing.row ? `Row ${listing.row}` : null, listing.yardName, listing.yardAddress]
           .filter(Boolean)
           .join(" · ");
 
-        const metaLine = [listing.dateAdded ? `Added ${formatDateAdded(listing.dateAdded)}` : null, `VIN \`${listing.vin}\``]
-          .filter(Boolean)
-          .join(" · ");
-
-        const messageLines = [rowYardLine, listing.yardAddress, "", carLine, "", metaLine].filter(
-          (line) => line !== null && line !== undefined,
-        );
+        const message = [titleLine, vinLine, addedLine, rowLine].filter(Boolean).join("\n\n");
 
         const optionsCheckUrl = watch.optionsCheckUrl || config.optionsCheckUrls?.[watch.make];
 
@@ -70,7 +69,7 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
 
         await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,
-          message: messageLines.join("\n"),
+          message,
           url: listing.url,
           actions,
           imageUrl: listing.imageUrl,
