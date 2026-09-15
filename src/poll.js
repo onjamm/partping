@@ -56,9 +56,11 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
           `**VIN:** ${listing.vin}`,
         ].filter(Boolean);
 
+        const optionsCheckUrl = watch.optionsCheckUrl || config.optionsCheckUrls?.[watch.make];
+
         const actions = [];
         if (listing.mapsUrl) actions.push({ label: "Get Directions", url: listing.mapsUrl });
-        if (watch.optionsCheckUrl) actions.push({ label: "Check Options", url: watch.optionsCheckUrl });
+        if (optionsCheckUrl) actions.push({ label: "Check Options", url: optionsCheckUrl });
 
         await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,

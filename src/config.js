@@ -37,6 +37,9 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
 
   config.ntfy.server ??= "https://ntfy.sh";
   config.pollIntervalMinutes ??= 15;
+  // Per-make default for the "Check Options" button (e.g. { "BMW": "https://bimmer.work/" }).
+  // A watch's own `optionsCheckUrl` overrides this when set.
+  config.optionsCheckUrls ??= {};
   // SEEN_STORE_PATH lets a host with ephemeral local disk (Railway, etc.)
   // point this at a mounted persistent volume instead.
   config.seenStorePath = process.env.SEEN_STORE_PATH || config.seenStorePath || "data/seen.json";

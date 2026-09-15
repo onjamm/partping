@@ -6,12 +6,13 @@ import path from "node:path";
 import { runOnce, formatDateAdded } from "../src/poll.js";
 import { saveSeenStore, loadSeenStore } from "../src/seenStore.js";
 
-async function withConfig(watches, fn) {
+async function withConfig(watches, fn, extra = {}) {
   const dir = await mkdtemp(path.join(tmpdir(), "partping-test-"));
   const config = {
     ntfy: { server: "https://ntfy.example.com", topic: "t" },
     seenStorePath: path.join(dir, "seen.json"),
     watches,
+    ...extra,
   };
   try {
     await fn(config);
@@ -63,9 +64,29 @@ test("a new listing gets notified and marked seen", async () => {
   });
 });
 
-test("adds a Check Options button when the watch has optionsCheckUrl set", async () => {
+test("adds a Check Options button from config.optionsCheckUrls, keyed by the watch's make", async () => {
   await withConfig(
-    [{ id: "e46", label: "E46 328i", optionsCheckUrl: "https://bimmer.work/" }],
+    [{ id: "e46", label: "E46 328i", make: "BMW" }],
+    async (config) => {
+      const notified = [];
+      await runOnce(config, {
+        search: async () => [listing], // listing.make === "BMW"
+        notify: async (ntfy, payload) => notified.push(payload),
+        decode: noDecode,
+      });
+
+      assert.deepEqual(notified[0].actions, [
+        { label: "Get Directions", url: listing.mapsUrl },
+        { label: "Check Options", url: "https://bimmer.work/" },
+      ]);
+    },
+    { optionsCheckUrls: { BMW: "https://bimmer.work/" } },
+  );
+});
+
+test("a watch's own optionsCheckUrl overrides the make-level default", async () => {
+  await withConfig(
+    [{ id: "e46", label: "E46 328i", optionsCheckUrl: "https://custom.example.com/" }],
     async (config) => {
       const notified = [];
       await runOnce(config, {
@@ -76,10 +97,24 @@ test("adds a Check Options button when the watch has optionsCheckUrl set", async
 
       assert.deepEqual(notified[0].actions, [
         { label: "Get Directions", url: listing.mapsUrl },
-        { label: "Check Options", url: "https://bimmer.work/" },
+        { label: "Check Options", url: "https://custom.example.com/" },
       ]);
     },
+    { optionsCheckUrls: { BMW: "https://bimmer.work/" } },
   );
+});
+
+test("no Check Options button when neither the watch nor config has a match for the make", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const notified = [];
+    await runOnce(config, {
+      search: async () => [listing], // make: "BMW", but config.optionsCheckUrls is empty
+      notify: async (ntfy, payload) => notified.push(payload),
+      decode: noDecode,
+    });
+
+    assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
+  });
 });
 
 test("a listing missing row/dateAdded doesn't leak 'undefined' into the message", async () => {

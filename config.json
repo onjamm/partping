@@ -5,6 +5,9 @@
   },
   "pollIntervalMinutes": 5,
   "seenStorePath": "data/seen.json",
+  "optionsCheckUrls": {
+    "BMW": "https://bimmer.work/"
+  },
   "watches": [
     {
       "id": "e46-328i-prefacelift",
@@ -16,8 +19,7 @@
       "yearMin": 1999,
       "yearMax": 2001,
       "savedSearchRadiusMiles": 50,
-      "zip": "98385",
-      "optionsCheckUrl": "https://bimmer.work/"
+      "zip": "98385"
     }
   ]
 }

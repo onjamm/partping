@@ -34,11 +34,15 @@ https://ntfy.sh/<your-topic>.
 Edit `config.json`'s `watches` array to match what you're actually
 searching for. Each entry's `id` must stay stable once you've started
 polling — it's the key used in the seen-VIN store, so renaming it means
-getting re-alerted on everything. `optionsCheckUrl` is optional — if set,
-notifications get a "Check Options" button linking there (e.g. a
-BMW-specific VIN-decoder site for checking factory equipment like Xenon
-headlights) — it just links out, doesn't auto-fill or auto-submit
-anything.
+getting re-alerted on everything.
+
+Notifications get a "Check Options" button (e.g. a make-specific
+VIN-decoder site for checking factory equipment like Xenon headlights) —
+it just links out, doesn't auto-fill or auto-submit anything. Set it via
+the top-level `optionsCheckUrls` map, keyed by make (`{ "BMW":
+"https://bimmer.work/" }`), so every watch for that make picks it up
+automatically. A watch's own `optionsCheckUrl` overrides the map for that
+one watch specifically, if some car needs a different site.
 
 ## Run
 

@@ -50,12 +50,20 @@ test("throws when watches is missing or empty", async () => {
   });
 });
 
-test("applies defaults for server, pollIntervalMinutes, seenStorePath", async () => {
+test("applies defaults for server, pollIntervalMinutes, seenStorePath, optionsCheckUrls", async () => {
   await withConfigFile(validConfig, async (file) => {
     const config = await loadConfig(file);
     assert.equal(config.ntfy.server, "https://ntfy.sh");
     assert.equal(config.pollIntervalMinutes, 15);
     assert.ok(path.isAbsolute(config.seenStorePath));
+    assert.deepEqual(config.optionsCheckUrls, {});
+  });
+});
+
+test("preserves an explicit optionsCheckUrls map instead of overwriting with {}", async () => {
+  await withConfigFile({ ...validConfig, optionsCheckUrls: { BMW: "https://bimmer.work/" } }, async (file) => {
+    const config = await loadConfig(file);
+    assert.deepEqual(config.optionsCheckUrls, { BMW: "https://bimmer.work/" });
   });
 });
 
