@@ -20,17 +20,23 @@ the poll loop) is built and ready.
 
 ```bash
 npm install    # no deps yet, but future-proofs this
-cp config.example.json config.json
+export NTFY_TOPIC=pick-a-hard-to-guess-topic-name
 ```
 
-Edit `config.json`:
-- `ntfy.topic` — pick a hard-to-guess topic name (anyone who knows it can
-  read/publish to it on the public ntfy.sh server; use a self-hosted
-  server or ntfy's auth features if that's a concern). Subscribe to it in
-  the ntfy app or at https://ntfy.sh/<your-topic>.
-- `watches` — one entry per saved search. `id` must be stable (it's the
-  key used in the seen-VIN store) — don't rename it once you've started
-  polling, or you'll get re-alerted on everything.
+`config.json` is committed to the repo (it's just your watch list — make,
+model, year range, state, zip, radius — nothing secret). The one real
+secret, `ntfy.topic`, is deliberately *not* in it: set it via the
+`NTFY_TOPIC` env var instead (locally as above; on Railway, see Deploy
+below). Anyone who knows your ntfy topic can read/publish to it on the
+public ntfy.sh server, which is exactly why it isn't sitting in git history
+— use a self-hosted ntfy server or its auth features if that's a bigger
+concern for you. Subscribe to your topic in the ntfy app or at
+https://ntfy.sh/<your-topic>.
+
+Edit `config.json`'s `watches` array to match what you're actually
+searching for. Each entry's `id` must stay stable once you've started
+polling — it's the key used in the seen-VIN store, so renaming it means
+getting re-alerted on everything.
 
 ## Run
 
@@ -40,7 +46,36 @@ npm start        # loop forever at config.pollIntervalMinutes
 ```
 
 Seen VINs are stored per-watch in `data/seen.json` (created automatically,
-gitignored).
+gitignored). Override the path with `SEEN_STORE_PATH` — this is how a host
+with ephemeral local disk (see Deploy below) points it at persistent
+storage instead.
+
+## Deploy (Railway)
+
+This is meant to run as a long-lived background worker, not a scheduled
+job — `npm start` polls forever on its own, so it just needs somewhere
+that's actually always on.
+
+1. Push this repo to GitHub (already done if you're reading this from
+   there).
+2. In Railway: **New Project → Deploy from GitHub repo** → select this
+   repo. Railway auto-detects it as a Node app via Nixpacks and
+   `railway.json` tells it to run `npm start` with an on-failure restart
+   policy.
+3. Add a **Volume** to the service, mounted at e.g. `/data`. Without this,
+   `data/seen.json` lives on the container's ephemeral disk and gets wiped
+   on every redeploy — you'd get re-alerted on every listing you've
+   already seen.
+4. Set env vars on the service:
+   - `NTFY_TOPIC` — your real topic (required, see Setup above)
+   - `SEEN_STORE_PATH` = `/data/seen.json` — points the seen-VIN store at
+     the volume you just mounted
+5. Deploy, then check the service logs to confirm it's polling on
+   schedule (every `pollIntervalMinutes`, default 5).
+
+Note: until `src/row52.js` is implemented (see Status above), every poll
+will log a "not implemented" error and send zero notifications — that's
+expected, not a deploy failure.
 
 ## Tests
 

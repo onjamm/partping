@@ -3,7 +3,7 @@
     "server": "https://ntfy.sh",
     "topic": "REPLACE-WITH-A-PRIVATE-NTFY-TOPIC"
   },
-  "pollIntervalMinutes": 15,
+  "pollIntervalMinutes": 5,
   "seenStorePath": "data/seen.json",
   "watches": [
     {

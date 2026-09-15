@@ -10,7 +10,7 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
   } catch (err) {
     if (err.code === "ENOENT") {
       throw new Error(
-        `Config file not found at "${configPath}". Copy config.example.json to config.json and fill in your ntfy topic + watches.`,
+        `Config file not found at "${configPath}". config.json is committed to the repo — make sure you're running from the repo root, or pass a different path via PARTPING_CONFIG.`,
       );
     }
     throw err;
@@ -18,8 +18,18 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
 
   const config = JSON.parse(raw);
 
+  // ntfy.topic is the one real secret in here, so it's allowed to come from
+  // an env var instead of the committed file — set NTFY_TOPIC locally or in
+  // your host's dashboard (e.g. Railway) and it overrides whatever's on disk.
+  if (process.env.NTFY_TOPIC) {
+    config.ntfy ??= {};
+    config.ntfy.topic = process.env.NTFY_TOPIC;
+  }
+
   if (!config.ntfy?.topic || config.ntfy.topic.startsWith("REPLACE-WITH")) {
-    throw new Error("config.json is missing a real ntfy.topic.");
+    throw new Error(
+      "Missing ntfy topic: set it in config.json, or via the NTFY_TOPIC environment variable.",
+    );
   }
   if (!Array.isArray(config.watches) || config.watches.length === 0) {
     throw new Error("config.json must define at least one entry in `watches`.");
@@ -27,7 +37,9 @@ export async function loadConfig(configPath = DEFAULT_CONFIG_PATH) {
 
   config.ntfy.server ??= "https://ntfy.sh";
   config.pollIntervalMinutes ??= 15;
-  config.seenStorePath ??= "data/seen.json";
+  // SEEN_STORE_PATH lets a host with ephemeral local disk (Railway, etc.)
+  // point this at a mounted persistent volume instead.
+  config.seenStorePath = process.env.SEEN_STORE_PATH || config.seenStorePath || "data/seen.json";
   config.seenStorePath = path.resolve(config.seenStorePath);
 
   return config;

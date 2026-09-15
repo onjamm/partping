@@ -31,7 +31,7 @@ test("throws a clear error when the config file is missing", async () => {
 
 test("throws when ntfy.topic is missing", async () => {
   await withConfigFile({ watches: validConfig.watches }, async (file) => {
-    await assert.rejects(() => loadConfig(file), /ntfy\.topic/);
+    await assert.rejects(() => loadConfig(file), /Missing ntfy topic/);
   });
 });
 
@@ -39,7 +39,7 @@ test("throws when ntfy.topic is still the placeholder", async () => {
   await withConfigFile(
     { ntfy: { topic: "REPLACE-WITH-A-PRIVATE-NTFY-TOPIC" }, watches: validConfig.watches },
     async (file) => {
-      await assert.rejects(() => loadConfig(file), /ntfy\.topic/);
+      await assert.rejects(() => loadConfig(file), /Missing ntfy topic/);
     },
   );
 });
@@ -68,4 +68,31 @@ test("preserves explicit values instead of overwriting with defaults", async () 
       assert.equal(config.pollIntervalMinutes, 5);
     },
   );
+});
+
+test("NTFY_TOPIC env var overrides config.json's topic, even a placeholder one", async () => {
+  await withConfigFile(
+    { ntfy: { topic: "REPLACE-WITH-A-PRIVATE-NTFY-TOPIC" }, watches: validConfig.watches },
+    async (file) => {
+      process.env.NTFY_TOPIC = "env-supplied-topic";
+      try {
+        const config = await loadConfig(file);
+        assert.equal(config.ntfy.topic, "env-supplied-topic");
+      } finally {
+        delete process.env.NTFY_TOPIC;
+      }
+    },
+  );
+});
+
+test("SEEN_STORE_PATH env var overrides config.json's seenStorePath", async () => {
+  await withConfigFile(validConfig, async (file) => {
+    process.env.SEEN_STORE_PATH = "/tmp/partping-custom-seen.json";
+    try {
+      const config = await loadConfig(file);
+      assert.equal(config.seenStorePath, path.resolve("/tmp/partping-custom-seen.json"));
+    } finally {
+      delete process.env.SEEN_STORE_PATH;
+    }
+  });
 });
