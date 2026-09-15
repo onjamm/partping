@@ -45,16 +45,22 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
       try {
         const decoded = await decode(listing.vin);
 
-        const messageLines = [
-          `**${listing.year ?? ""} ${listing.make} ${listing.model}**`.trim(),
-          decoded?.bodyClass || decoded?.model
-            ? `_${[decoded?.bodyClass, decoded?.model].filter(Boolean).join(" · ")}_`
-            : null,
-          `**Yard:** ${listing.yard}`,
-          listing.row ? `**Row:** ${listing.row}` : null,
-          listing.dateAdded ? `**Added to yard:** ${formatDateAdded(listing.dateAdded)}` : null,
-          `**VIN:** ${listing.vin}`,
-        ].filter(Boolean);
+        // Ordered by what you'd actually do with it: where to go first (bold —
+        // the one thing you need at a glance), then what car it is (to confirm
+        // it's the right one), then low-priority reference info last.
+        const rowYardLine = listing.row ? `**Row ${listing.row}** — ${listing.yardName}` : listing.yardName;
+
+        const carLine = [`${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(), decoded?.bodyClass, decoded?.model]
+          .filter(Boolean)
+          .join(" · ");
+
+        const metaLine = [listing.dateAdded ? `Added ${formatDateAdded(listing.dateAdded)}` : null, `VIN \`${listing.vin}\``]
+          .filter(Boolean)
+          .join(" · ");
+
+        const messageLines = [rowYardLine, listing.yardAddress, "", carLine, "", metaLine].filter(
+          (line) => line !== null && line !== undefined,
+        );
 
         const optionsCheckUrl = watch.optionsCheckUrl || config.optionsCheckUrls?.[watch.make];
 

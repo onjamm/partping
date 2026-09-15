@@ -63,6 +63,8 @@ export function parseListings(html) {
       model,
       year: year ? Number(year) : undefined,
       yard: [yardName, yardAddress].filter(Boolean).join(" — "),
+      yardName,
+      yardAddress,
       row,
       dateAdded,
       imageUrl,

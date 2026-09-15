@@ -45,6 +45,8 @@ test("parseListings extracts all 5 listings from a real captured Row52 page", as
   assert.equal(first.row, "24");
   assert.equal(first.dateAdded, "Sep 03, 2026");
   assert.equal(first.yard, "PICK-n-PULL Tacoma — Lakewood, Washington 98499");
+  assert.equal(first.yardName, "PICK-n-PULL Tacoma");
+  assert.equal(first.yardAddress, "Lakewood, Washington 98499");
   assert.equal(first.url, "https://row52.com/Vehicle/Index/WBAAV53431FJ63013");
   assert.equal(first.imageUrl, "https://cdn.row52.com/images/2406ffdc-ceb5-4f3a-9991-3e13d5b7ad49.JPG");
   assert.equal(

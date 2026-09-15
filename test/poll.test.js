@@ -26,7 +26,9 @@ const listing = {
   make: "BMW",
   model: "3 Series",
   year: 1999,
-  yard: "Pick-n-Pull Tacoma",
+  yard: "Pick-n-Pull Tacoma — Lakewood, Washington 98499",
+  yardName: "Pick-n-Pull Tacoma",
+  yardAddress: "Lakewood, Washington 98499",
   row: "24",
   dateAdded: "Sep 03, 2026",
   url: "https://row52.com/vin123",
@@ -52,8 +54,10 @@ test("a new listing gets notified and marked seen", async () => {
     assert.equal(notified.length, 1);
     assert.match(notified[0].title, /E46 328i/);
     assert.match(notified[0].message, /VIN123/);
-    assert.match(notified[0].message, /\*\*Row:\*\* 24/);
-    assert.match(notified[0].message, /\*\*Added to yard:\*\* Sep 03, 2026/);
+    assert.match(notified[0].message, /\*\*Row 24\*\* — Pick-n-Pull Tacoma/);
+    assert.match(notified[0].message, /Lakewood, Washington 98499/);
+    assert.match(notified[0].message, /Added Sep 03, 2026/);
+    assert.match(notified[0].message, /VIN `VIN123`/);
     assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
     assert.equal(notified[0].imageUrl, listing.imageUrl);
     assert.equal(notified[0].priority, "high");
@@ -117,9 +121,9 @@ test("no Check Options button when neither the watch nor config has a match for 
   });
 });
 
-test("a listing missing row/dateAdded doesn't leak 'undefined' into the message", async () => {
+test("a listing missing row/dateAdded/yardAddress doesn't leak 'undefined' into the message", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
-    const bareListing = { vin: "VIN999", make: "BMW", model: "3 Series", year: 1999, yard: "Pick-n-Pull Tacoma", url: "x" };
+    const bareListing = { vin: "VIN999", make: "BMW", model: "3 Series", year: 1999, yardName: "Pick-n-Pull Tacoma", url: "x" };
     const notified = [];
     await runOnce(config, {
       search: async () => [bareListing],
@@ -128,8 +132,9 @@ test("a listing missing row/dateAdded doesn't leak 'undefined' into the message"
     });
 
     assert.doesNotMatch(notified[0].message, /undefined/);
-    assert.doesNotMatch(notified[0].message, /Row:/);
-    assert.doesNotMatch(notified[0].message, /Added to yard:/);
+    assert.doesNotMatch(notified[0].message, /\*\*Row/);
+    assert.doesNotMatch(notified[0].message, /Added /);
+    assert.match(notified[0].message, /^Pick-n-Pull Tacoma\n/); // no row -> plain yard name leads, not bolded
   });
 });
 
@@ -217,7 +222,7 @@ test("a decoded body style/model is included in the notification", async () => {
       decode: async () => ({ bodyClass: "Sedan/Saloon", model: "330i" }),
     });
 
-    assert.match(notified[0].message, /_Sedan\/Saloon · 330i_/);
+    assert.match(notified[0].message, /1999 BMW 3 Series · Sedan\/Saloon · 330i/);
   });
 });
 
@@ -230,11 +235,11 @@ test("a decoded result with only one of bodyClass/model still renders cleanly", 
       decode: async () => ({ bodyClass: "Sedan/Saloon", model: undefined }),
     });
 
-    assert.match(notified[0].message, /_Sedan\/Saloon_/);
+    assert.match(notified[0].message, /1999 BMW 3 Series · Sedan\/Saloon\n/);
   });
 });
 
-test("a failed VIN decode doesn't block the notification, just omits the enrichment line", async () => {
+test("a failed VIN decode doesn't block the notification, just omits the enrichment", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     const newCount = await runOnce(config, {
@@ -245,7 +250,7 @@ test("a failed VIN decode doesn't block the notification, just omits the enrichm
 
     assert.equal(newCount, 1);
     assert.equal(notified.length, 1);
-    assert.doesNotMatch(notified[0].message, /_.*_/);
+    assert.match(notified[0].message, /1999 BMW 3 Series\n/); // no trailing " · ..." when decode is empty
   });
 });
 
