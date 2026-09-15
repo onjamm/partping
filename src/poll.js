@@ -33,6 +33,7 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
           title: `New junkyard hit: ${watch.label}`,
           message: messageLines.join("\n"),
           url: listing.url,
+          directionsUrl: listing.mapsUrl,
           tags: ["car", "mag"],
         });
       } catch (err) {

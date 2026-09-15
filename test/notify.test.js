@@ -44,6 +44,16 @@ test("joins tags with commas into the Tags header", async (t) => {
   assert.equal(mockFetch.lastCall.options.headers.Tags, "car,mag");
 });
 
+test("includes an Actions header with a Get Directions button when directionsUrl is given, omits it otherwise", async (t) => {
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m", directionsUrl: "https://maps.example.com/x" });
+  assert.equal(mockFetch.lastCall.options.headers.Actions, "view, Get Directions, https://maps.example.com/x");
+
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
+  assert.equal("Actions" in mockFetch.lastCall.options.headers, false);
+});
+
 test("throws with status info when ntfy responds with a non-ok status", async (t) => {
   mockFetch(t, { ok: false, status: 404, statusText: "Not Found", responseBody: "topic not found" });
 

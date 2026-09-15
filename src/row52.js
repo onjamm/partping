@@ -54,6 +54,8 @@ export function parseListings(html) {
       .match(/<h4 class="mobile-title">Added to yard<\/h4>\s*<div class="list-row-right">\s*<strong>([^<]+)<\/strong>/)?.[1]
       ?.trim();
 
+    const yardQuery = [yardName, yardAddress].filter(Boolean).join(", ");
+
     listings.push({
       vin,
       make,
@@ -63,6 +65,9 @@ export function parseListings(html) {
       row,
       dateAdded,
       url: `https://row52.com/Vehicle/Index/${vin}`,
+      mapsUrl: yardQuery
+        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(yardQuery)}`
+        : undefined,
     });
   }
 

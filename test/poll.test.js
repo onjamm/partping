@@ -29,6 +29,7 @@ const listing = {
   row: "24",
   dateAdded: "Sep 03, 2026",
   url: "https://row52.com/vin123",
+  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Pick-n-Pull+Tacoma",
 };
 
 test("a new listing gets notified and marked seen", async () => {
@@ -45,6 +46,7 @@ test("a new listing gets notified and marked seen", async () => {
     assert.match(notified[0].message, /VIN123/);
     assert.match(notified[0].message, /Row: 24/);
     assert.match(notified[0].message, /Added to yard: Sep 03, 2026/);
+    assert.equal(notified[0].directionsUrl, listing.mapsUrl);
 
     const seen = await loadSeenStore(config.seenStorePath);
     assert.ok(seen.e46.VIN123);
