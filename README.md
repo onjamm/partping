@@ -1,20 +1,18 @@
 # partping
 
 Polls Row52 (row52.com) for junkyard vehicle listings matching your saved
-searches (make/model/year range, state, radius) and sends an [ntfy.sh](https://ntfy.sh)
+searches (make/model/year range, zip + radius) and sends an [ntfy.sh](https://ntfy.sh)
 push notification for any listing we haven't alerted on before. No UI, no
 database — a flat JSON file tracks seen VINs.
 
 ## Status
 
-v0 scaffold. `src/row52.js` is a **stub** — Row52's actual search
-request/response shape hasn't been captured yet (row52.com was unreachable
-from the sandbox that built this). See `docs/row52-investigation.md` for
-what's needed and how to capture it; once that's filled in, `searchRow52()`
-is the only thing left to implement.
-
-Everything else (config loading, the seen-VIN store, ntfy notifications,
-the poll loop) is built and ready.
+v0, fully working: polls Row52, dedupes against seen VINs, sends ntfy
+alerts, runs as a long-lived worker on Railway. Currently one watch
+configured (1999-2001 BMW 3-Series). See `docs/row52-investigation.md`
+for how to add more make/model watches — Row52 identifies them by
+internal numeric IDs, not names, so each new one needs a quick manual
+lookup.
 
 ## Setup
 
@@ -73,10 +71,6 @@ that's actually always on.
 5. Deploy, then check the service logs to confirm it's polling on
    schedule (every `pollIntervalMinutes`, default 5).
 
-Note: until `src/row52.js` is implemented (see Status above), every poll
-will log a "not implemented" error and send zero notifications — that's
-expected, not a deploy failure.
-
 ## Tests
 
 ```bash
@@ -85,16 +79,16 @@ npm test
 
 Uses Node's built-in test runner (`node:test`), no extra dependencies.
 Covers config validation, the seen-VIN store, ntfy request-building (fetch
-mocked), and the poll loop's diff/notify/retry logic (search and notify
-are injected, so this doesn't touch the network or row52.js). `row52.js`
-itself only has a smoke test for its current stub behavior — real
-coverage goes in once it's implemented.
+mocked), the poll loop's diff/notify/retry logic (search and notify are
+injected, so this doesn't touch the network), and `row52.js`'s URL-building
+and HTML parsing — the parser is tested against a real captured Row52 page
+(`test/fixtures/row52-search.html`), not a guess at the markup.
 
 ## Layout
 
 - `src/config.js` — loads and validates `config.json`
-- `src/row52.js` — Row52 search client (**stub**, see Status above)
+- `src/row52.js` — Row52 search client (builds the search URL, parses results)
 - `src/seenStore.js` — flat-JSON seen-VIN tracking
 - `src/notify.js` — ntfy.sh push notifications
 - `src/poll.js` — CLI entry point / poll loop
-- `test/` — unit tests (`npm test`)
+- `test/` — unit tests (`npm test`), including a real Row52 page fixture

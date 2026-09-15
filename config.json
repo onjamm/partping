@@ -10,12 +10,13 @@
       "id": "e46-328i-prefacelift",
       "label": "1999-2001 BMW E46 328i (prefacelift 3-Series)",
       "make": "BMW",
-      "model": "3 Series",
+      "model": "3-Series",
+      "makeId": 90,
+      "modelId": 1150,
       "yearMin": 1999,
       "yearMax": 2001,
-      "state": "WA",
       "savedSearchRadiusMiles": 50,
-      "zip": "98101"
+      "zip": "98385"
     }
   ]
 }
