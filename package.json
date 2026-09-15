@@ -1,0 +1,14 @@
+{
+  "name": "partping",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Poll Row52 for junkyard inventory matches and push ntfy.sh alerts for ones we haven't seen before.",
+  "scripts": {
+    "start": "node src/poll.js",
+    "once": "node src/poll.js --once"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

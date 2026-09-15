@@ -1,0 +1,21 @@
+{
+  "ntfy": {
+    "server": "https://ntfy.sh",
+    "topic": "REPLACE-WITH-A-PRIVATE-NTFY-TOPIC"
+  },
+  "pollIntervalMinutes": 15,
+  "seenStorePath": "data/seen.json",
+  "watches": [
+    {
+      "id": "e46-328i-prefacelift",
+      "label": "1999-2001 BMW E46 328i (prefacelift 3-Series)",
+      "make": "BMW",
+      "model": "3 Series",
+      "yearMin": 1999,
+      "yearMax": 2001,
+      "state": "WA",
+      "savedSearchRadiusMiles": 50,
+      "zip": "98101"
+    }
+  ]
+}
