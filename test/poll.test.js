@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { runOnce } from "../src/poll.js";
+import { runOnce, formatDateAdded } from "../src/poll.js";
 import { saveSeenStore, loadSeenStore } from "../src/seenStore.js";
 
 async function withConfig(watches, fn) {
@@ -30,6 +30,7 @@ const listing = {
   dateAdded: "Sep 03, 2026",
   url: "https://row52.com/vin123",
   mapsUrl: "https://www.google.com/maps/search/?api=1&query=Pick-n-Pull+Tacoma",
+  imageUrl: "https://cdn.row52.com/images/example.jpg",
 };
 
 test("a new listing gets notified and marked seen", async () => {
@@ -47,6 +48,8 @@ test("a new listing gets notified and marked seen", async () => {
     assert.match(notified[0].message, /Row: 24/);
     assert.match(notified[0].message, /Added to yard: Sep 03, 2026/);
     assert.equal(notified[0].directionsUrl, listing.mapsUrl);
+    assert.equal(notified[0].imageUrl, listing.imageUrl);
+    assert.equal(notified[0].priority, "high");
 
     const seen = await loadSeenStore(config.seenStorePath);
     assert.ok(seen.e46.VIN123);
@@ -137,4 +140,20 @@ test("the same VIN under two different watches is tracked independently", async 
       assert.equal(notifyCalls, 2);
     },
   );
+});
+
+test("formatDateAdded annotates with a relative day count", () => {
+  const now = new Date(2026, 8, 10); // Sep 10, 2026 (months are 0-indexed)
+
+  assert.equal(formatDateAdded("Sep 10, 2026", now), "Sep 10, 2026 (today)");
+  assert.equal(formatDateAdded("Sep 09, 2026", now), "Sep 09, 2026 (yesterday)");
+  assert.equal(formatDateAdded("Sep 03, 2026", now), "Sep 03, 2026 (7 days ago)");
+});
+
+test("formatDateAdded falls back to the raw string when unparseable or in the future", () => {
+  const now = new Date(2026, 8, 10);
+
+  assert.equal(formatDateAdded("not a date", now), "not a date");
+  assert.equal(formatDateAdded("Sep 15, 2026", now), "Sep 15, 2026");
+  assert.equal(formatDateAdded(undefined, now), undefined);
 });

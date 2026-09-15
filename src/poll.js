@@ -3,6 +3,27 @@ import { loadSeenStore, saveSeenStore, isSeen, markSeen } from "./seenStore.js";
 import { searchRow52 } from "./row52.js";
 import { sendNtfyNotification } from "./notify.js";
 
+// "Sep 03, 2026" -> "Sep 03, 2026 (2 days ago)". Falls back to the raw
+// string if it doesn't parse, or if it's not actually in the past.
+export function formatDateAdded(dateAdded, now = new Date()) {
+  if (!dateAdded) return dateAdded;
+
+  const then = new Date(dateAdded);
+  if (Number.isNaN(then.getTime())) return dateAdded;
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfThen = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const diffDays = Math.round((startOfToday - startOfThen) / 86_400_000);
+
+  let relative;
+  if (diffDays === 0) relative = "today";
+  else if (diffDays === 1) relative = "yesterday";
+  else if (diffDays > 1) relative = `${diffDays} days ago`;
+  else return dateAdded; // future/unexpected — don't annotate
+
+  return `${dateAdded} (${relative})`;
+}
+
 export async function runOnce(config, { search = searchRow52, notify = sendNtfyNotification } = {}) {
   const seen = await loadSeenStore(config.seenStorePath);
   let newCount = 0;
@@ -25,7 +46,7 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
           `${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(),
           `Yard: ${listing.yard}`,
           listing.row ? `Row: ${listing.row}` : null,
-          listing.dateAdded ? `Added to yard: ${listing.dateAdded}` : null,
+          listing.dateAdded ? `Added to yard: ${formatDateAdded(listing.dateAdded)}` : null,
           `VIN: ${listing.vin}`,
         ].filter(Boolean);
 
@@ -34,6 +55,8 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
           message: messageLines.join("\n"),
           url: listing.url,
           directionsUrl: listing.mapsUrl,
+          imageUrl: listing.imageUrl,
+          priority: "high",
           tags: ["car", "mag"],
         });
       } catch (err) {

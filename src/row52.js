@@ -53,6 +53,7 @@ export function parseListings(html) {
     const dateAdded = block
       .match(/<h4 class="mobile-title">Added to yard<\/h4>\s*<div class="list-row-right">\s*<strong>([^<]+)<\/strong>/)?.[1]
       ?.trim();
+    const imageUrl = block.match(/<img itemprop="image"[\s\S]*?src="([^"]+)"/)?.[1];
 
     const yardQuery = [yardName, yardAddress].filter(Boolean).join(", ");
 
@@ -64,6 +65,7 @@ export function parseListings(html) {
       yard: [yardName, yardAddress].filter(Boolean).join(" — "),
       row,
       dateAdded,
+      imageUrl,
       url: `https://row52.com/Vehicle/Index/${vin}`,
       mapsUrl: yardQuery
         ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(yardQuery)}`

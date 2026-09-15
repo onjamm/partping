@@ -54,6 +54,26 @@ test("includes an Actions header with a Get Directions button when directionsUrl
   assert.equal("Actions" in mockFetch.lastCall.options.headers, false);
 });
 
+test("includes Attach header when imageUrl is given, omits it otherwise", async (t) => {
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m", imageUrl: "https://cdn.row52.com/x.jpg" });
+  assert.equal(mockFetch.lastCall.options.headers.Attach, "https://cdn.row52.com/x.jpg");
+
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
+  assert.equal("Attach" in mockFetch.lastCall.options.headers, false);
+});
+
+test("includes Priority header when given, omits it otherwise", async (t) => {
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m", priority: "high" });
+  assert.equal(mockFetch.lastCall.options.headers.Priority, "high");
+
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
+  assert.equal("Priority" in mockFetch.lastCall.options.headers, false);
+});
+
 test("throws with status info when ntfy responds with a non-ok status", async (t) => {
   mockFetch(t, { ok: false, status: 404, statusText: "Not Found", responseBody: "topic not found" });
 
