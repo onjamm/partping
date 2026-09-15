@@ -2,6 +2,7 @@ import { loadConfig } from "./config.js";
 import { loadSeenStore, saveSeenStore, isSeen, markSeen } from "./seenStore.js";
 import { searchRow52 } from "./row52.js";
 import { sendNtfyNotification } from "./notify.js";
+import { decodeVin } from "./vinDecode.js";
 
 // "Sep 03, 2026" -> "Sep 03, 2026 (2 days ago)". Falls back to the raw
 // string if it doesn't parse, or if it's not actually in the past.
@@ -24,7 +25,7 @@ export function formatDateAdded(dateAdded, now = new Date()) {
   return `${dateAdded} (${relative})`;
 }
 
-export async function runOnce(config, { search = searchRow52, notify = sendNtfyNotification } = {}) {
+export async function runOnce(config, { search = searchRow52, notify = sendNtfyNotification, decode = decodeVin } = {}) {
   const seen = await loadSeenStore(config.seenStorePath);
   let newCount = 0;
 
@@ -42,8 +43,12 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
 
       console.log(`[${watch.id}] new listing: ${listing.vin} @ ${listing.yard}`);
       try {
+        const decoded = await decode(listing.vin);
+
         const messageLines = [
           `${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(),
+          decoded?.bodyClass ? `Body: ${decoded.bodyClass}` : null,
+          decoded?.model ? `Model: ${decoded.model}` : null,
           `Yard: ${listing.yard}`,
           listing.row ? `Row: ${listing.row}` : null,
           listing.dateAdded ? `Added to yard: ${formatDateAdded(listing.dateAdded)}` : null,

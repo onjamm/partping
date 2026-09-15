@@ -79,16 +79,18 @@ npm test
 
 Uses Node's built-in test runner (`node:test`), no extra dependencies.
 Covers config validation, the seen-VIN store, ntfy request-building (fetch
-mocked), the poll loop's diff/notify/retry logic (search and notify are
-injected, so this doesn't touch the network), and `row52.js`'s URL-building
-and HTML parsing — the parser is tested against a real captured Row52 page
-(`test/fixtures/row52-search.html`), not a guess at the markup.
+mocked), the poll loop's diff/notify/retry logic (search, notify, and
+decode are injected, so this doesn't touch the network), `row52.js`'s
+URL-building and HTML parsing, and `vinDecode.js`'s NHTSA response
+parsing — both parsers are tested against real captured responses
+(`test/fixtures/`), not a guess at the shape.
 
 ## Layout
 
 - `src/config.js` — loads and validates `config.json`
 - `src/row52.js` — Row52 search client (builds the search URL, parses results)
+- `src/vinDecode.js` — body style / model enrichment via NHTSA's public VIN-decode API
 - `src/seenStore.js` — flat-JSON seen-VIN tracking
 - `src/notify.js` — ntfy.sh push notifications
 - `src/poll.js` — CLI entry point / poll loop
-- `test/` — unit tests (`npm test`), including a real Row52 page fixture
+- `test/` — unit tests (`npm test`), including real Row52/NHTSA fixtures

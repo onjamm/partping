@@ -33,12 +33,18 @@ const listing = {
   imageUrl: "https://cdn.row52.com/images/example.jpg",
 };
 
+// runOnce defaults to the real decodeVin (a real network call) when no
+// `decode` is injected — every test that isn't specifically exercising VIN
+// decoding stubs it out so tests stay hermetic and fast.
+const noDecode = async () => null;
+
 test("a new listing gets notified and marked seen", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     const newCount = await runOnce(config, {
       search: async () => [listing],
       notify: async (ntfy, payload) => notified.push(payload),
+      decode: noDecode,
     });
 
     assert.equal(newCount, 1);
@@ -63,6 +69,7 @@ test("a listing missing row/dateAdded doesn't leak 'undefined' into the message"
     await runOnce(config, {
       search: async () => [bareListing],
       notify: async (ntfy, payload) => notified.push(payload),
+      decode: noDecode,
     });
 
     assert.doesNotMatch(notified[0].message, /undefined/);
@@ -79,6 +86,7 @@ test("a previously-seen listing is not re-notified", async () => {
     const newCount = await runOnce(config, {
       search: async () => [listing],
       notify: async () => notifyCalls++,
+      decode: noDecode,
     });
 
     assert.equal(newCount, 0);
@@ -93,6 +101,7 @@ test("a failed notification is not marked seen, so it's retried next poll", asyn
       notify: async () => {
         throw new Error("ntfy down");
       },
+      decode: noDecode,
     });
 
     assert.equal(newCount, 0);
@@ -115,6 +124,7 @@ test("a search failure on one watch doesn't stop the others", async () => {
           return [listing];
         },
         notify: async (ntfy, payload) => notified.push(payload),
+        decode: noDecode,
       });
 
       assert.equal(newCount, 1);
@@ -134,12 +144,43 @@ test("the same VIN under two different watches is tracked independently", async 
       const newCount = await runOnce(config, {
         search: async () => [listing],
         notify: async () => notifyCalls++,
+        decode: noDecode,
       });
 
       assert.equal(newCount, 2);
       assert.equal(notifyCalls, 2);
     },
   );
+});
+
+test("a decoded body style/model is included in the notification", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const notified = [];
+    await runOnce(config, {
+      search: async () => [listing],
+      notify: async (ntfy, payload) => notified.push(payload),
+      decode: async () => ({ bodyClass: "Sedan/Saloon", model: "330i" }),
+    });
+
+    assert.match(notified[0].message, /Body: Sedan\/Saloon/);
+    assert.match(notified[0].message, /Model: 330i/);
+  });
+});
+
+test("a failed VIN decode doesn't block the notification, just omits the enrichment", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const notified = [];
+    const newCount = await runOnce(config, {
+      search: async () => [listing],
+      notify: async (ntfy, payload) => notified.push(payload),
+      decode: async () => null, // decodeVin's real contract on failure — never throws
+    });
+
+    assert.equal(newCount, 1);
+    assert.equal(notified.length, 1);
+    assert.doesNotMatch(notified[0].message, /Body:/);
+    assert.doesNotMatch(notified[0].message, /Model:/);
+  });
 });
 
 test("formatDateAdded annotates with a relative day count", () => {
