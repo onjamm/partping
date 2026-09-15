@@ -6,7 +6,8 @@
   "description": "Poll Row52 for junkyard inventory matches and push ntfy.sh alerts for ones we haven't seen before.",
   "scripts": {
     "start": "node src/poll.js",
-    "once": "node src/poll.js --once"
+    "once": "node src/poll.js --once",
+    "test": "node --test \"test/**/*.test.js\""
   },
   "engines": {
     "node": ">=18"

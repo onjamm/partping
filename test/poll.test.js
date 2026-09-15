@@ -1,0 +1,112 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { runOnce } from "../src/poll.js";
+import { saveSeenStore, loadSeenStore } from "../src/seenStore.js";
+
+async function withConfig(watches, fn) {
+  const dir = await mkdtemp(path.join(tmpdir(), "partping-test-"));
+  const config = {
+    ntfy: { server: "https://ntfy.example.com", topic: "t" },
+    seenStorePath: path.join(dir, "seen.json"),
+    watches,
+  };
+  try {
+    await fn(config);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+}
+
+const listing = { vin: "VIN123", make: "BMW", model: "3 Series", year: 1999, yard: "Pick-n-Pull Tacoma", url: "https://row52.com/vin123" };
+
+test("a new listing gets notified and marked seen", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const notified = [];
+    const newCount = await runOnce(config, {
+      search: async () => [listing],
+      notify: async (ntfy, payload) => notified.push(payload),
+    });
+
+    assert.equal(newCount, 1);
+    assert.equal(notified.length, 1);
+    assert.match(notified[0].title, /E46 328i/);
+    assert.match(notified[0].message, /VIN123/);
+
+    const seen = await loadSeenStore(config.seenStorePath);
+    assert.ok(seen.e46.VIN123);
+  });
+});
+
+test("a previously-seen listing is not re-notified", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    await saveSeenStore(config.seenStorePath, { e46: { VIN123: "2026-01-01T00:00:00.000Z" } });
+
+    let notifyCalls = 0;
+    const newCount = await runOnce(config, {
+      search: async () => [listing],
+      notify: async () => notifyCalls++,
+    });
+
+    assert.equal(newCount, 0);
+    assert.equal(notifyCalls, 0);
+  });
+});
+
+test("a failed notification is not marked seen, so it's retried next poll", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const newCount = await runOnce(config, {
+      search: async () => [listing],
+      notify: async () => {
+        throw new Error("ntfy down");
+      },
+    });
+
+    assert.equal(newCount, 0);
+    const seen = await loadSeenStore(config.seenStorePath);
+    assert.equal(seen.e46?.VIN123, undefined);
+  });
+});
+
+test("a search failure on one watch doesn't stop the others", async () => {
+  await withConfig(
+    [
+      { id: "broken", label: "Broken watch" },
+      { id: "e46", label: "E46 328i" },
+    ],
+    async (config) => {
+      const notified = [];
+      const newCount = await runOnce(config, {
+        search: async (watch) => {
+          if (watch.id === "broken") throw new Error("boom");
+          return [listing];
+        },
+        notify: async (ntfy, payload) => notified.push(payload),
+      });
+
+      assert.equal(newCount, 1);
+      assert.equal(notified.length, 1);
+    },
+  );
+});
+
+test("the same VIN under two different watches is tracked independently", async () => {
+  await withConfig(
+    [
+      { id: "watch-a", label: "Watch A" },
+      { id: "watch-b", label: "Watch B" },
+    ],
+    async (config) => {
+      let notifyCalls = 0;
+      const newCount = await runOnce(config, {
+        search: async () => [listing],
+        notify: async () => notifyCalls++,
+      });
+
+      assert.equal(newCount, 2);
+      assert.equal(notifyCalls, 2);
+    },
+  );
+});

@@ -42,6 +42,19 @@ npm start        # loop forever at config.pollIntervalMinutes
 Seen VINs are stored per-watch in `data/seen.json` (created automatically,
 gitignored).
 
+## Tests
+
+```bash
+npm test
+```
+
+Uses Node's built-in test runner (`node:test`), no extra dependencies.
+Covers config validation, the seen-VIN store, ntfy request-building (fetch
+mocked), and the poll loop's diff/notify/retry logic (search and notify
+are injected, so this doesn't touch the network or row52.js). `row52.js`
+itself only has a smoke test for its current stub behavior — real
+coverage goes in once it's implemented.
+
 ## Layout
 
 - `src/config.js` — loads and validates `config.json`
@@ -49,3 +62,4 @@ gitignored).
 - `src/seenStore.js` — flat-JSON seen-VIN tracking
 - `src/notify.js` — ntfy.sh push notifications
 - `src/poll.js` — CLI entry point / poll loop
+- `test/` — unit tests (`npm test`)

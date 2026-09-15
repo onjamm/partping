@@ -3,14 +3,14 @@ import { loadSeenStore, saveSeenStore, isSeen, markSeen } from "./seenStore.js";
 import { searchRow52 } from "./row52.js";
 import { sendNtfyNotification } from "./notify.js";
 
-async function runOnce(config) {
+export async function runOnce(config, { search = searchRow52, notify = sendNtfyNotification } = {}) {
   const seen = await loadSeenStore(config.seenStorePath);
   let newCount = 0;
 
   for (const watch of config.watches) {
     let results;
     try {
-      results = await searchRow52(watch);
+      results = await search(watch);
     } catch (err) {
       console.error(`[${watch.id}] search failed: ${err.message}`);
       continue;
@@ -21,7 +21,7 @@ async function runOnce(config) {
 
       console.log(`[${watch.id}] new listing: ${listing.vin} @ ${listing.yard}`);
       try {
-        await sendNtfyNotification(config.ntfy, {
+        await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,
           message: `${listing.year ?? ""} ${listing.make} ${listing.model}\nYard: ${listing.yard}\nVIN: ${listing.vin}`.trim(),
           url: listing.url,
@@ -74,7 +74,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error(err.message);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((err) => {
+    console.error(err.message);
+    process.exit(1);
+  });
+}
