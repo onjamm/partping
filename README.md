@@ -34,7 +34,11 @@ https://ntfy.sh/<your-topic>.
 Edit `config.json`'s `watches` array to match what you're actually
 searching for. Each entry's `id` must stay stable once you've started
 polling — it's the key used in the seen-VIN store, so renaming it means
-getting re-alerted on everything.
+getting re-alerted on everything. `optionsCheckUrl` is optional — if set,
+notifications get a "Check Options" button linking there (e.g. a
+BMW-specific VIN-decoder site for checking factory equipment like Xenon
+headlights) — it just links out, doesn't auto-fill or auto-submit
+anything.
 
 ## Run
 

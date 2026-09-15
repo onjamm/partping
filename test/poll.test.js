@@ -51,15 +51,35 @@ test("a new listing gets notified and marked seen", async () => {
     assert.equal(notified.length, 1);
     assert.match(notified[0].title, /E46 328i/);
     assert.match(notified[0].message, /VIN123/);
-    assert.match(notified[0].message, /Row: 24/);
-    assert.match(notified[0].message, /Added to yard: Sep 03, 2026/);
-    assert.equal(notified[0].directionsUrl, listing.mapsUrl);
+    assert.match(notified[0].message, /\*\*Row:\*\* 24/);
+    assert.match(notified[0].message, /\*\*Added to yard:\*\* Sep 03, 2026/);
+    assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
     assert.equal(notified[0].imageUrl, listing.imageUrl);
     assert.equal(notified[0].priority, "high");
+    assert.equal(notified[0].markdown, true);
 
     const seen = await loadSeenStore(config.seenStorePath);
     assert.ok(seen.e46.VIN123);
   });
+});
+
+test("adds a Check Options button when the watch has optionsCheckUrl set", async () => {
+  await withConfig(
+    [{ id: "e46", label: "E46 328i", optionsCheckUrl: "https://bimmer.work/" }],
+    async (config) => {
+      const notified = [];
+      await runOnce(config, {
+        search: async () => [listing],
+        notify: async (ntfy, payload) => notified.push(payload),
+        decode: noDecode,
+      });
+
+      assert.deepEqual(notified[0].actions, [
+        { label: "Get Directions", url: listing.mapsUrl },
+        { label: "Check Options", url: "https://bimmer.work/" },
+      ]);
+    },
+  );
 });
 
 test("a listing missing row/dateAdded doesn't leak 'undefined' into the message", async () => {
@@ -162,12 +182,24 @@ test("a decoded body style/model is included in the notification", async () => {
       decode: async () => ({ bodyClass: "Sedan/Saloon", model: "330i" }),
     });
 
-    assert.match(notified[0].message, /Body: Sedan\/Saloon/);
-    assert.match(notified[0].message, /Model: 330i/);
+    assert.match(notified[0].message, /_Sedan\/Saloon · 330i_/);
   });
 });
 
-test("a failed VIN decode doesn't block the notification, just omits the enrichment", async () => {
+test("a decoded result with only one of bodyClass/model still renders cleanly", async () => {
+  await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
+    const notified = [];
+    await runOnce(config, {
+      search: async () => [listing],
+      notify: async (ntfy, payload) => notified.push(payload),
+      decode: async () => ({ bodyClass: "Sedan/Saloon", model: undefined }),
+    });
+
+    assert.match(notified[0].message, /_Sedan\/Saloon_/);
+  });
+});
+
+test("a failed VIN decode doesn't block the notification, just omits the enrichment line", async () => {
   await withConfig([{ id: "e46", label: "E46 328i" }], async (config) => {
     const notified = [];
     const newCount = await runOnce(config, {
@@ -178,8 +210,7 @@ test("a failed VIN decode doesn't block the notification, just omits the enrichm
 
     assert.equal(newCount, 1);
     assert.equal(notified.length, 1);
-    assert.doesNotMatch(notified[0].message, /Body:/);
-    assert.doesNotMatch(notified[0].message, /Model:/);
+    assert.doesNotMatch(notified[0].message, /_.*_/);
   });
 });
 

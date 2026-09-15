@@ -46,22 +46,28 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
         const decoded = await decode(listing.vin);
 
         const messageLines = [
-          `${listing.year ?? ""} ${listing.make} ${listing.model}`.trim(),
-          decoded?.bodyClass ? `Body: ${decoded.bodyClass}` : null,
-          decoded?.model ? `Model: ${decoded.model}` : null,
-          `Yard: ${listing.yard}`,
-          listing.row ? `Row: ${listing.row}` : null,
-          listing.dateAdded ? `Added to yard: ${formatDateAdded(listing.dateAdded)}` : null,
-          `VIN: ${listing.vin}`,
+          `**${listing.year ?? ""} ${listing.make} ${listing.model}**`.trim(),
+          decoded?.bodyClass || decoded?.model
+            ? `_${[decoded?.bodyClass, decoded?.model].filter(Boolean).join(" · ")}_`
+            : null,
+          `**Yard:** ${listing.yard}`,
+          listing.row ? `**Row:** ${listing.row}` : null,
+          listing.dateAdded ? `**Added to yard:** ${formatDateAdded(listing.dateAdded)}` : null,
+          `**VIN:** ${listing.vin}`,
         ].filter(Boolean);
+
+        const actions = [];
+        if (listing.mapsUrl) actions.push({ label: "Get Directions", url: listing.mapsUrl });
+        if (watch.optionsCheckUrl) actions.push({ label: "Check Options", url: watch.optionsCheckUrl });
 
         await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,
           message: messageLines.join("\n"),
           url: listing.url,
-          directionsUrl: listing.mapsUrl,
+          actions,
           imageUrl: listing.imageUrl,
           priority: "high",
+          markdown: true,
           tags: ["car", "mag"],
         });
       } catch (err) {

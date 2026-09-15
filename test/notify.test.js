@@ -44,10 +44,24 @@ test("joins tags with commas into the Tags header", async (t) => {
   assert.equal(mockFetch.lastCall.options.headers.Tags, "car,mag");
 });
 
-test("includes an Actions header with a Get Directions button when directionsUrl is given, omits it otherwise", async (t) => {
+test("includes an Actions header built from the actions array, omits it when empty/absent", async (t) => {
   mockFetch(t);
-  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m", directionsUrl: "https://maps.example.com/x" });
-  assert.equal(mockFetch.lastCall.options.headers.Actions, "view, Get Directions, https://maps.example.com/x");
+  await sendNtfyNotification(ntfyConfig, {
+    title: "t",
+    message: "m",
+    actions: [
+      { label: "Get Directions", url: "https://maps.example.com/x" },
+      { label: "Check Options", url: "https://bimmer.work/" },
+    ],
+  });
+  assert.equal(
+    mockFetch.lastCall.options.headers.Actions,
+    "view, Get Directions, https://maps.example.com/x; view, Check Options, https://bimmer.work/",
+  );
+
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m", actions: [] });
+  assert.equal("Actions" in mockFetch.lastCall.options.headers, false);
 
   mockFetch(t);
   await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
@@ -72,6 +86,16 @@ test("includes Priority header when given, omits it otherwise", async (t) => {
   mockFetch(t);
   await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
   assert.equal("Priority" in mockFetch.lastCall.options.headers, false);
+});
+
+test("includes Markdown header when markdown is truthy, omits it otherwise", async (t) => {
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "**m**", markdown: true });
+  assert.equal(mockFetch.lastCall.options.headers.Markdown, "yes");
+
+  mockFetch(t);
+  await sendNtfyNotification(ntfyConfig, { title: "t", message: "m" });
+  assert.equal("Markdown" in mockFetch.lastCall.options.headers, false);
 });
 
 test("throws with status info when ntfy responds with a non-ok status", async (t) => {

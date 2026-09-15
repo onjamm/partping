@@ -16,7 +16,8 @@
       "yearMin": 1999,
       "yearMax": 2001,
       "savedSearchRadiusMiles": 50,
-      "zip": "98385"
+      "zip": "98385",
+      "optionsCheckUrl": "https://bimmer.work/"
     }
   ]
 }
