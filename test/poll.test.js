@@ -57,7 +57,10 @@ test("a new listing gets notified and marked seen", async () => {
     assert.match(notified[0].message, /VIN `VIN123`/);
     assert.match(notified[0].message, /Added Sep 03, 2026/);
     assert.match(notified[0].message, /Row 24 · Pick-n-Pull Tacoma · Lakewood, Washington 98499$/);
-    assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
+    assert.deepEqual(notified[0].actions, [
+      { label: "Open Listing", url: listing.url },
+      { label: "Get Directions", url: listing.mapsUrl },
+    ]);
     assert.equal(notified[0].imageUrl, listing.imageUrl);
     assert.equal(notified[0].priority, "high");
     assert.equal(notified[0].markdown, true);
@@ -79,6 +82,7 @@ test("adds a Check Options button from config.optionsCheckUrls, keyed by the wat
       });
 
       assert.deepEqual(notified[0].actions, [
+        { label: "Open Listing", url: listing.url },
         { label: "Get Directions", url: listing.mapsUrl },
         { label: "Check Options", url: "https://bimmer.work/" },
       ]);
@@ -99,6 +103,7 @@ test("a watch's own optionsCheckUrl overrides the make-level default", async () 
       });
 
       assert.deepEqual(notified[0].actions, [
+        { label: "Open Listing", url: listing.url },
         { label: "Get Directions", url: listing.mapsUrl },
         { label: "Check Options", url: "https://custom.example.com/" },
       ]);
@@ -116,7 +121,10 @@ test("no Check Options button when neither the watch nor config has a match for 
       decode: noDecode,
     });
 
-    assert.deepEqual(notified[0].actions, [{ label: "Get Directions", url: listing.mapsUrl }]);
+    assert.deepEqual(notified[0].actions, [
+      { label: "Open Listing", url: listing.url },
+      { label: "Get Directions", url: listing.mapsUrl },
+    ]);
   });
 });
 

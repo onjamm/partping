@@ -63,14 +63,17 @@ export async function runOnce(config, { search = searchRow52, notify = sendNtfyN
 
         const optionsCheckUrl = watch.optionsCheckUrl || config.optionsCheckUrls?.[watch.make];
 
-        const actions = [];
+        // A whole-notification Click URL makes tapping anywhere navigate
+        // straight out — including over text you'd want to select/copy (the
+        // VIN). Using explicit action buttons instead keeps the message body
+        // itself inert, so it opens normally and VIN stays copyable.
+        const actions = [{ label: "Open Listing", url: listing.url }];
         if (listing.mapsUrl) actions.push({ label: "Get Directions", url: listing.mapsUrl });
         if (optionsCheckUrl) actions.push({ label: "Check Options", url: optionsCheckUrl });
 
         await notify(config.ntfy, {
           title: `New junkyard hit: ${watch.label}`,
           message,
-          url: listing.url,
           actions,
           imageUrl: listing.imageUrl,
           priority: "high",
